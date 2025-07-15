@@ -1,0 +1,11 @@
+<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="192" height="192" rx="48" fill="#007bff"/>
+<g transform="translate(32, 32)">
+  <rect x="16" y="16" width="96" height="96" rx="12" fill="white" stroke="#007bff" stroke-width="4"/>
+  <path d="M48 64L64 80L96 48" stroke="#007bff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <rect x="32" y="40" width="8" height="8" rx="2" fill="#28a745"/>
+  <rect x="32" y="56" width="8" height="8" rx="2" fill="#ffc107"/>
+  <rect x="32" y="72" width="8" height="8" rx="2" fill="#dc3545"/>
+</g>
+<text x="96" y="140" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="16" font-weight="bold">PWA</text>
+</svg>
