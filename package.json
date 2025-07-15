@@ -13,7 +13,10 @@
     "bootstrap": "^5.3.7",
     "react": "^19.1.0",
     "react-bootstrap": "^2.10.10",
+    "react-clock": "^6.0.0",
     "react-dom": "^19.1.0",
+    "react-mobile-picker": "^1.1.2",
+    "react-time-picker": "^7.0.0",
     "vite-plugin-pwa": "^1.0.1",
     "workbox-window": "^7.3.0"
   },

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert } from 'react-bootstrap';
+import TimePicker from './TimePicker';
 import './App.css';
 
 interface Recurso {
@@ -8,6 +9,8 @@ interface Recurso {
   ocupado: boolean;
   texto: string;
   historial: string[];
+  horaContacto?: string;
+  notificacionMostrada?: boolean;
 }
 
 function App() {
@@ -15,12 +18,19 @@ function App() {
   const [nuevoRecurso, setNuevoRecurso] = useState('');
   const [instalable, setInstalable] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [currentRecursoId, setCurrentRecursoId] = useState<string>('');
 
   // Cargar datos del localStorage al iniciar
   useEffect(() => {
     const recursosGuardados = localStorage.getItem('recursos-pwa');
     if (recursosGuardados) {
       setRecursos(JSON.parse(recursosGuardados));
+    }
+
+    // Solicitar permisos de notificación
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
     }
 
     // Detectar si la PWA puede ser instalada
@@ -40,6 +50,47 @@ function App() {
   // Guardar en localStorage cada vez que cambien los recursos
   useEffect(() => {
     localStorage.setItem('recursos-pwa', JSON.stringify(recursos));
+  }, [recursos]);
+
+  // Verificar notificaciones cada minuto
+  useEffect(() => {
+    const verificarNotificaciones = () => {
+      const ahora = new Date();
+      const horaActual = ahora.toTimeString().slice(0, 5); // HH:MM
+
+      setRecursos(recursosActuales => 
+        recursosActuales.map(recurso => {
+          if (recurso.horaContacto && 
+              recurso.horaContacto === horaActual && 
+              !recurso.notificacionMostrada &&
+              'Notification' in window && 
+              Notification.permission === 'granted') {
+            
+            // Mostrar notificación
+            new Notification('🔔 Recordatorio de Contacto', {
+              body: `Es hora de contactar a ${recurso.nombre}`,
+              icon: '/pwa-192x192.png',
+              tag: `contacto-${recurso.id}`,
+              requireInteraction: true
+            });
+
+            return { ...recurso, notificacionMostrada: true };
+          }
+          
+          // Resetear la notificación si la hora cambió
+          if (recurso.horaContacto !== horaActual && recurso.notificacionMostrada) {
+            return { ...recurso, notificacionMostrada: false };
+          }
+
+          return recurso;
+        })
+      );
+    };
+
+    const interval = setInterval(verificarNotificaciones, 60000); // Cada minuto
+    verificarNotificaciones(); // Verificar inmediatamente
+
+    return () => clearInterval(interval);
   }, [recursos]);
 
   const agregarRecurso = () => {
@@ -91,6 +142,31 @@ function App() {
     }));
   };
 
+  const actualizarHoraContacto = (id: string, horaContacto: string) => {
+    setRecursos(recursos.map(recurso => {
+      if (recurso.id === id) {
+        return { ...recurso, horaContacto, notificacionMostrada: false };
+      }
+      return recurso;
+    }));
+  };
+
+  const abrirTimePicker = (recursoId: string) => {
+    setCurrentRecursoId(recursoId);
+    setShowTimePicker(true);
+  };
+
+  const cerrarTimePicker = () => {
+    setShowTimePicker(false);
+    setCurrentRecursoId('');
+  };
+
+  const seleccionarHora = (time: string) => {
+    if (currentRecursoId) {
+      actualizarHoraContacto(currentRecursoId, time);
+    }
+  };
+
   const instalarPWA = async () => {
     if (deferredPrompt) {
       deferredPrompt.prompt();
@@ -110,7 +186,7 @@ function App() {
             <Card.Header className="bg-primary text-white">
               <Row className="align-items-center">
                 <Col>
-                  <h2 className="mb-0">🔧 Gestor de Recursos PWA</h2>
+                  <h2 className="mb-0">🔧 Equipo Desarrollo Compass</h2>
                 </Col>
                 <Col xs="auto">
                   {instalable && (
@@ -164,9 +240,16 @@ function App() {
                 <Row>
                   {recursos.map((recurso) => (
                     <Col xs={12} md={6} lg={4} key={recurso.id} className="mb-4">
-                      <Card className={`h-100 ${recurso.ocupado ? 'border-warning' : 'border-success'}`}>
-                        <Card.Header className={`d-flex justify-content-between align-items-center ${recurso.ocupado ? 'bg-warning' : 'bg-success'} text-white`}>
-                          <span className="fw-bold">{recurso.nombre}</span>
+                      <Card className={`h-100 ${recurso.ocupado ? 'card-ocupado border-success' : 'card-libre border-danger'}`}>
+                        <Card.Header className={`d-flex justify-content-between align-items-center ${recurso.ocupado ? 'header-ocupado bg-success' : 'header-libre bg-danger'} text-white`}>
+                          <div>
+                            <span className="fw-bold">{recurso.nombre}</span>
+                            {recurso.horaContacto && (
+                              <div className="small hora-programada">
+                                🕐 {recurso.horaContacto}
+                              </div>
+                            )}
+                          </div>
                           <Button
                             variant="outline-light"
                             size="sm"
@@ -176,14 +259,44 @@ function App() {
                           </Button>
                         </Card.Header>
                         <Card.Body>
-                          {/* Checkbox de ocupado */}
-                          <Form.Check
-                            type="checkbox"
-                            label="Ocupado"
-                            checked={recurso.ocupado}
-                            onChange={() => toggleOcupado(recurso.id)}
-                            className="mb-3"
-                          />
+                          {/* Checkbox de ocupado y selector de hora en la misma línea */}
+                          <Row className="mb-3 align-items-center">
+                            <Col xs={12} md={6}>
+                              <Form.Check
+                                type="checkbox"
+                                label="Ocupado"
+                                checked={recurso.ocupado}
+                                onChange={() => toggleOcupado(recurso.id)}
+                              />
+                            </Col>
+                            <Col xs={12} md={6}>
+                              <div className="d-flex gap-1 justify-content-end">
+                                <Button
+                                  variant={recurso.horaContacto ? "info" : "outline-secondary"}
+                                  size="sm"
+                                  onClick={() => abrirTimePicker(recurso.id)}
+                                  className={`btn-time-selector ${recurso.horaContacto ? 'selected' : ''}`}
+                                >
+                                  {recurso.horaContacto ? (
+                                    <>🕐 {recurso.horaContacto}</>
+                                  ) : (
+                                    <>🕐 Hora</>
+                                  )}
+                                </Button>
+                                {recurso.horaContacto && (
+                                  <Button
+                                    variant="outline-danger"
+                                    size="sm"
+                                    onClick={() => actualizarHoraContacto(recurso.id, '')}
+                                    title="Limpiar hora"
+                                    style={{ minWidth: '32px' }}
+                                  >
+                                    ✕
+                                  </Button>
+                                )}
+                              </div>
+                            </Col>
+                          </Row>
 
                           {/* Área de texto */}
                           <Form.Control
@@ -220,6 +333,14 @@ function App() {
           </Card>
         </Col>
       </Row>
+
+      {/* TimePicker Modal */}
+      <TimePicker
+        show={showTimePicker}
+        onHide={cerrarTimePicker}
+        onTimeSelect={seleccionarHora}
+        initialTime={currentRecursoId ? recursos.find(r => r.id === currentRecursoId)?.horaContacto || '' : ''}
+      />
     </Container>
   );
 }

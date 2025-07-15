@@ -79,3 +79,106 @@ body {
   text-decoration: line-through;
   opacity: 0.7;
 }
+
+/* Estilos para el campo de tiempo */
+.time-input {
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+.time-input:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 0.1rem rgba(0, 123, 255, 0.25);
+  outline: none;
+}
+
+/* Estilos para el selector de hora */
+.form-select {
+  transition: all 0.2s ease-in-out;
+}
+
+.form-select:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 0.1rem rgba(0, 123, 255, 0.25);
+}
+
+.form-select option {
+  padding: 8px 12px;
+}
+
+/* Selector con hora seleccionada */
+.form-select.hora-seleccionada {
+  background-color: #e3f2fd;
+  border-color: #2196f3;
+  color: #1976d2;
+  font-weight: 500;
+}
+
+/* Indicador de hora programada */
+.hora-programada {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  padding: 2px 6px;
+  font-size: 0.75rem;
+}
+
+/* Estilos para el TimePicker */
+.picker-column {
+  background: transparent !important;
+}
+
+.picker-item {
+  background: transparent !important;
+  color: white !important;
+}
+
+.picker-item.picker-item-selected {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px;
+}
+
+/* Botón de selección de hora */
+.btn-time-selector {
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.btn-time-selector:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-time-selector.selected {
+  border-color: #007bff;
+  background: linear-gradient(45deg, #007bff, #0056b3);
+}
+
+/* Estilos personalizados para tarjetas */
+.card-libre {
+  border-color: #721c24 !important;
+  opacity: 0.75;
+  background-color: rgba(114, 28, 36, 0.05) !important;
+}
+
+.header-libre {
+  background-color: #721c24 !important;
+  opacity: 0.9;
+}
+
+.card-ocupado {
+  border-color: #28a745 !important;
+  opacity: 1;
+  background-color: rgba(40, 167, 69, 0.05) !important;
+}
+
+.header-ocupado {
+  background-color: #28a745 !important;
+  opacity: 1;
+}
+
+/* Transiciones suaves para el cambio de estado */
+.card, .card .card-header {
+  transition: all 0.3s ease-in-out;
+}
