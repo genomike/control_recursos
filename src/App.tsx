@@ -203,7 +203,6 @@ function App() {
                 <Col>
                   <Card className="bg-light">
                     <Card.Body>
-                      <h5 className="mb-3">➕ Agregar Nuevo Recurso</h5>
                       <Row>
                         <Col xs={12} md={8} lg={9}>
                           <Form.Control
@@ -260,43 +259,39 @@ function App() {
                         </Card.Header>
                         <Card.Body>
                           {/* Checkbox de ocupado y selector de hora en la misma línea */}
-                          <Row className="mb-3 align-items-center">
-                            <Col xs={12} md={6}>
-                              <Form.Check
-                                type="checkbox"
-                                label="Ocupado"
-                                checked={recurso.ocupado}
-                                onChange={() => toggleOcupado(recurso.id)}
-                              />
-                            </Col>
-                            <Col xs={12} md={6}>
-                              <div className="d-flex gap-1 justify-content-end">
-                                <Button
-                                  variant={recurso.horaContacto ? "info" : "outline-secondary"}
-                                  size="sm"
-                                  onClick={() => abrirTimePicker(recurso.id)}
-                                  className={`btn-time-selector ${recurso.horaContacto ? 'selected' : ''}`}
-                                >
-                                  {recurso.horaContacto ? (
-                                    <>🕐 {recurso.horaContacto}</>
-                                  ) : (
-                                    <>🕐 Hora</>
-                                  )}
-                                </Button>
-                                {recurso.horaContacto && (
-                                  <Button
-                                    variant="outline-danger"
-                                    size="sm"
-                                    onClick={() => actualizarHoraContacto(recurso.id, '')}
-                                    title="Limpiar hora"
-                                    style={{ minWidth: '32px' }}
-                                  >
-                                    ✕
-                                  </Button>
+                          <div className="d-flex justify-content-between align-items-center mb-3">
+                            <Form.Check
+                              type="checkbox"
+                              label="Ocupado"
+                              checked={recurso.ocupado}
+                              onChange={() => toggleOcupado(recurso.id)}
+                            />
+                            <div className="d-flex gap-1">
+                              <Button
+                                variant={recurso.horaContacto ? "info" : "outline-secondary"}
+                                size="sm"
+                                onClick={() => abrirTimePicker(recurso.id)}
+                                className={`btn-time-selector ${recurso.horaContacto ? 'selected' : ''}`}
+                              >
+                                {recurso.horaContacto ? (
+                                  <>🕐 {recurso.horaContacto}</>
+                                ) : (
+                                  <>🕐 Hora</>
                                 )}
-                              </div>
-                            </Col>
-                          </Row>
+                              </Button>
+                              {recurso.horaContacto && (
+                                <Button
+                                  variant="outline-danger"
+                                  size="sm"
+                                  onClick={() => actualizarHoraContacto(recurso.id, '')}
+                                  title="Limpiar hora"
+                                  style={{ minWidth: '32px' }}
+                                >
+                                  ✕
+                                </Button>
+                              )}
+                            </div>
+                          </div>
 
                           {/* Área de texto */}
                           <Form.Control
