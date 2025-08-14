@@ -1,52 +1,37 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { VitePWA } from 'vite-plugin-pwa'
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
-    VitePWA({
-      registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
-      manifest: {
-        name: 'Gestor de Recursos PWA',
-        short_name: 'Recursos PWA',
-        description: 'Aplicación PWA para gestionar recursos con almacenamiento local',
-        theme_color: '#000000',
-        background_color: '#ffffff',
-        display: 'standalone',
-        scope: '/',
-        start_url: '/',
-        icons: [
-          {
-            src: 'pwa-192x192.png',
-            sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png'
-          }
-        ]
-      },
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-cache',
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365 // <== 365 days
-              }
-            }
-          }
-        ]
+    // Plugin para servir archivos PWA con MIME types correctos
+    {
+      name: 'pwa-dev-support',
+      configureServer(server) {
+        // Service Workers con MIME type correcto
+        server.middlewares.use('/sw-dev.js', (_req, res, next) => {
+          res.setHeader('Content-Type', 'application/javascript')
+          next()
+        })
+        server.middlewares.use('/service-worker.js', (_req, res, next) => {
+          res.setHeader('Content-Type', 'application/javascript')
+          next()
+        })
+        // Manifest con MIME type correcto
+        server.middlewares.use('/manifest.json', (_req, res, next) => {
+          res.setHeader('Content-Type', 'application/json')
+          next()
+        })
       }
-    })
+    }
   ],
+  server: {
+    port: 5174,
+    host: true
+  },
+  preview: {
+    port: 4173,
+    host: true
+  },
+  publicDir: 'public'
 })

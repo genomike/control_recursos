@@ -11,6 +11,7 @@ interface Recurso {
   historial: string[];
   horaContacto?: string;
   notificacionMostrada?: boolean;
+  collapsed?: boolean; // Nuevo campo para estado de colapso
 }
 
 function App() {
@@ -91,7 +92,7 @@ function App() {
     verificarNotificaciones(); // Verificar inmediatamente
 
     return () => clearInterval(interval);
-  }, [recursos]);
+  }, []); // Remover 'recursos' de las dependencias para evitar loop infinito
 
   const agregarRecurso = () => {
     if (nuevoRecurso.trim()) {
@@ -178,6 +179,15 @@ function App() {
     }
   };
 
+  const toggleCollapsed = (id: string) => {
+    setRecursos(recursos.map(recurso => {
+      if (recurso.id === id) {
+        return { ...recurso, collapsed: !recurso.collapsed };
+      }
+      return recurso;
+    }));
+  };
+
   return (
     <Container fluid className="py-4">
       <Row className="justify-content-center">
@@ -239,25 +249,43 @@ function App() {
                 <Row>
                   {recursos.map((recurso) => (
                     <Col xs={12} md={6} lg={4} key={recurso.id} className="mb-4">
-                      <Card className={`h-100 ${recurso.ocupado ? 'card-ocupado border-success' : 'card-libre border-danger'}`}>
-                        <Card.Header className={`d-flex justify-content-between align-items-center ${recurso.ocupado ? 'header-ocupado bg-success' : 'header-libre bg-danger'} text-white`}>
-                          <div>
-                            <span className="fw-bold">{recurso.nombre}</span>
-                            {recurso.horaContacto && (
-                              <div className="small hora-programada">
-                                🕐 {recurso.horaContacto}
-                              </div>
-                            )}
+                      <Card className={`h-auto ${recurso.ocupado ? 'card-ocupado border-success' : 'card-libre border-danger'}`}>
+                        <Card.Header 
+                          className={`d-flex justify-content-between align-items-center ${recurso.ocupado ? 'header-ocupado bg-success' : 'header-libre bg-danger'} text-white cursor-pointer`}
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => toggleCollapsed(recurso.id)}
+                        >
+                          <div className="d-flex justify-content-between align-items-center w-100">
+                            <div className="d-flex align-items-center gap-2">
+                              <span className="fw-bold">{recurso.nombre}</span>
+                              {/* Mostrar hora en el título cuando está colapsado */}
+                              {recurso.collapsed && recurso.horaContacto && (
+                                <span className="small">🕐 {recurso.horaContacto}</span>
+                              )}
+                            </div>
+                            <div className="d-flex align-items-center gap-2">
+                              {/* Ícono de colapso */}
+                              <span className="text-white">
+                                {recurso.collapsed ? '▶️' : '🔽'}
+                              </span>
+                              <Button
+                                variant="outline-light"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation(); // Evitar que se active el toggle
+                                  eliminarRecurso(recurso.id);
+                                }}
+                                title="Eliminar recurso"
+                              >
+                                🗑️
+                              </Button>
+                            </div>
                           </div>
-                          <Button
-                            variant="outline-light"
-                            size="sm"
-                            onClick={() => eliminarRecurso(recurso.id)}
-                          >
-                            🗑️
-                          </Button>
                         </Card.Header>
-                        <Card.Body>
+                        
+                        {/* Contenido colapsable */}
+                        {!recurso.collapsed && (
+                          <Card.Body>
                           {/* Checkbox de ocupado y selector de hora en la misma línea */}
                           <div className="d-flex justify-content-between align-items-center mb-3">
                             <Form.Check
@@ -319,6 +347,7 @@ function App() {
                             </div>
                           )}
                         </Card.Body>
+                        )}
                       </Card>
                     </Col>
                   ))}

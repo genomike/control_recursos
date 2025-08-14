@@ -182,3 +182,39 @@ body {
 .card, .card .card-header {
   transition: all 0.3s ease-in-out;
 }
+
+/* Estilos para elementos colapsables */
+.cursor-pointer {
+  cursor: pointer !important;
+}
+
+.card-header.cursor-pointer:hover {
+  opacity: 0.9;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.collapse-icon {
+  transition: transform 0.2s ease-in-out;
+}
+
+.card-collapsed {
+  min-height: auto !important;
+}
+
+.card-expanded {
+  min-height: 200px;
+}
+
+/* Animación suave para el colapso */
+.card-body {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Mejoras visuales para el estado colapsado */
+.collapsed-header {
+  padding: 0.75rem 1rem;
+}
+
+.expanded-header {
+  padding: 0.75rem 1rem;
+}

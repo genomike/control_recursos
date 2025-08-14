@@ -1,0 +1,54 @@
+{
+  "short_name": "Compass Team",
+  "name": "Equipo Desarrollo Compass - Gestión de Recursos",
+  "description": "Gestión de recursos del equipo de desarrollo con notificaciones programadas",
+  "icons": [
+    {
+      "src": "/pwa-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-192.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay"],
+  "theme_color": "#007bff",
+  "background_color": "#ffffff",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "es",
+  "categories": ["productivity", "business"],
+  "prefer_related_applications": false,
+  "id": "compass-team-pwa"
+}
