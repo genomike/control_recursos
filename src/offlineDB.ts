@@ -1,4 +1,6 @@
 // Sistema de base de datos offline para PWA
+import { realTimeSync } from './realTimeSync';
+
 export interface Task {
   id: string;
   title: string;
@@ -100,6 +102,11 @@ class OfflineDB {
 
     await Promise.all(promises);
     console.log(`OfflineDB: ${tasks.length} tareas guardadas`);
+    
+    // 🔄 SINCRONIZACIÓN EN TIEMPO REAL
+    tasks.forEach(task => {
+      realTimeSync.syncTaskUpdated(task);
+    });
   }
 
   async getTasks(): Promise<Task[]> {
@@ -127,6 +134,9 @@ class OfflineDB {
 
   async saveTask(task: Task): Promise<void> {
     await this.saveTasks([task]);
+    
+    // 🔄 SINCRONIZACIÓN EN TIEMPO REAL
+    realTimeSync.syncTaskCreated(task);
   }
 
   async deleteTask(taskId: string): Promise<void> {
@@ -139,6 +149,10 @@ class OfflineDB {
 
       request.onsuccess = () => {
         console.log(`OfflineDB: Tarea ${taskId} eliminada`);
+        
+        // 🔄 SINCRONIZACIÓN EN TIEMPO REAL
+        realTimeSync.syncTaskDeleted(taskId);
+        
         resolve();
       };
       request.onerror = () => reject(request.error);

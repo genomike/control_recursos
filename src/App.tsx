@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert } from 'react-bootstrap';
+import { useRealTimeSync } from './useRealTimeSync';
+import { realTimeSync } from './realTimeSync';
+import { offlineDB } from './offlineDB';
 import TimePicker from './TimePicker';
 import './App.css';
 
@@ -11,10 +14,22 @@ interface Recurso {
   historial: string[];
   horaContacto?: string;
   notificacionMostrada?: boolean;
-  collapsed?: boolean; // Nuevo campo para estado de colapso
+  collapsed?: boolean;
 }
 
 function App() {
+  // 🔄 SINCRONIZACIÓN EN TIEMPO REAL
+  const {
+    isLoading,
+    forceSync,
+    activeInstances,
+    instanceId
+  } = useRealTimeSync({
+    autoRefresh: true,
+    enableNotifications: true
+  });
+
+  // Estado local para recursos (mantenemos compatibilidad)
   const [recursos, setRecursos] = useState<Recurso[]>([]);
   const [nuevoRecurso, setNuevoRecurso] = useState('');
   const [instalable, setInstalable] = useState(false);
@@ -22,7 +37,21 @@ function App() {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [currentRecursoId, setCurrentRecursoId] = useState<string>('');
 
-  // Cargar datos del localStorage al iniciar
+  // Inicializar base de datos offline
+  useEffect(() => {
+    const initDB = async () => {
+      try {
+        await offlineDB.init();
+        console.log('✅ Base de datos offline inicializada');
+      } catch (error) {
+        console.error('❌ Error inicializando base de datos:', error);
+      }
+    };
+
+    initDB();
+  }, []);
+
+  // Cargar datos del localStorage al iniciar (compatibilidad)
   useEffect(() => {
     const recursosGuardados = localStorage.getItem('recursos-pwa');
     if (recursosGuardados) {
@@ -48,10 +77,72 @@ function App() {
     };
   }, []);
 
-  // Guardar en localStorage cada vez que cambien los recursos
+  // Guardar en localStorage cada vez que cambien los recursos (compatibilidad)
   useEffect(() => {
     localStorage.setItem('recursos-pwa', JSON.stringify(recursos));
   }, [recursos]);
+
+  // 🔄 LISTENERS PARA SINCRONIZACIÓN DE RECURSOS EN TIEMPO REAL
+  useEffect(() => {
+    const handleRecursoSync = (data: any) => {
+      const { action, recurso, recursoId } = data;
+      
+      console.log('🔄 Sincronización de recurso recibida:', action, recurso);
+      
+      switch (action) {
+        case 'recurso-created':
+          setRecursos(prevRecursos => {
+            // Evitar duplicados
+            const exists = prevRecursos.some(r => r.id === recurso.id);
+            if (exists) return prevRecursos;
+            
+            console.log('✅ Agregando nuevo recurso:', recurso.nombre);
+            return [...prevRecursos, recurso];
+          });
+          
+          // Mostrar notificación
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('🆕 Nuevo recurso agregado', {
+              body: `${recurso.nombre} fue agregado por otra instancia`,
+              icon: '/pwa-192x192.png'
+            });
+          }
+          break;
+          
+        case 'recurso-updated':
+          setRecursos(prevRecursos => {
+            console.log('🔄 Actualizando recurso:', recurso.nombre);
+            return prevRecursos.map(r => 
+              r.id === recursoId ? { ...recurso } : r
+            );
+          });
+          break;
+          
+        case 'recurso-deleted':
+          setRecursos(prevRecursos => {
+            console.log('🗑️ Eliminando recurso:', recursoId);
+            return prevRecursos.filter(r => r.id !== recursoId);
+          });
+          
+          // Mostrar notificación
+          if ('Notification' in window && Notification.permission === 'granted' && recurso) {
+            new Notification('🗑️ Recurso eliminado', {
+              body: `${recurso.nombre} fue eliminado por otra instancia`,
+              icon: '/pwa-192x192.png'
+            });
+          }
+          break;
+      }
+    };
+
+    // Registrar listener para cambios de datos
+    realTimeSync.on('data-changed', handleRecursoSync);
+
+    // Cleanup
+    return () => {
+      realTimeSync.off('data-changed', handleRecursoSync);
+    };
+  }, []);
 
   // Verificar notificaciones cada minuto
   useEffect(() => {
@@ -94,7 +185,8 @@ function App() {
     return () => clearInterval(interval);
   }, []); // Remover 'recursos' de las dependencias para evitar loop infinito
 
-  const agregarRecurso = () => {
+  // 🔄 FUNCIONES CON SINCRONIZACIÓN EN TIEMPO REAL
+  const agregarRecurso = async () => {
     if (nuevoRecurso.trim()) {
       const nuevoRecursoObj: Recurso = {
         id: Date.now().toString(),
@@ -103,53 +195,124 @@ function App() {
         texto: '',
         historial: []
       };
+      
       setRecursos([...recursos, nuevoRecursoObj]);
       setNuevoRecurso('');
+
+      // 🔄 Sincronizar directamente el recurso con otras instancias
+      realTimeSync.broadcast({
+        type: 'data-changed',
+        data: { 
+          action: 'recurso-created',
+          recurso: nuevoRecursoObj
+        },
+        timestamp: Date.now()
+      });
     }
   };
 
-  const eliminarRecurso = (id: string) => {
+  const eliminarRecurso = async (id: string) => {
+    const recursoEliminado = recursos.find(r => r.id === id);
     setRecursos(recursos.filter(recurso => recurso.id !== id));
+    
+    // 🔄 Sincronizar eliminación
+    realTimeSync.broadcast({
+      type: 'data-changed',
+      data: { 
+        action: 'recurso-deleted',
+        recursoId: id,
+        recurso: recursoEliminado
+      },
+      timestamp: Date.now()
+    });
   };
 
-  const toggleOcupado = (id: string) => {
-    setRecursos(recursos.map(recurso => {
+  const toggleOcupado = async (id: string) => {
+    const recursoActualizado = recursos.map(recurso => {
       if (recurso.id === id) {
         return { ...recurso, ocupado: !recurso.ocupado };
       }
       return recurso;
-    }));
+    });
+    
+    setRecursos(recursoActualizado);
+
+    // 🔄 Sincronizar cambio de estado
+    const recurso = recursoActualizado.find(r => r.id === id);
+    if (recurso) {
+      realTimeSync.broadcast({
+        type: 'data-changed',
+        data: { 
+          action: 'recurso-updated',
+          recursoId: id,
+          recurso: recurso
+        },
+        timestamp: Date.now()
+      });
+    }
   };
 
-  const actualizarTexto = (id: string, texto: string) => {
-    setRecursos(recursos.map(recurso => {
+  const actualizarTexto = async (id: string, texto: string) => {
+    const recursoActualizado = recursos.map(recurso => {
       if (recurso.id === id) {
-        const recursoActualizado = { ...recurso, texto };
+        const recursoNuevo = { ...recurso, texto };
         
         // Si el texto se vació, desmarcar ocupado y agregar al historial
         if (texto.trim() === '' && recurso.texto.trim() !== '') {
           // Agregar al historial (máximo 3 elementos, FIFO)
           const nuevoHistorial = [recurso.texto, ...recurso.historial].slice(0, 3);
           return {
-            ...recursoActualizado,
+            ...recursoNuevo,
             ocupado: false,
             historial: nuevoHistorial
           };
         }
         
-        return recursoActualizado;
+        return recursoNuevo;
       }
       return recurso;
-    }));
+    });
+    
+    setRecursos(recursoActualizado);
+
+    // 🔄 Sincronizar actualización de texto
+    const recurso = recursoActualizado.find(r => r.id === id);
+    if (recurso) {
+      realTimeSync.broadcast({
+        type: 'data-changed',
+        data: { 
+          action: 'recurso-updated',
+          recursoId: id,
+          recurso: recurso
+        },
+        timestamp: Date.now()
+      });
+    }
   };
 
-  const actualizarHoraContacto = (id: string, horaContacto: string) => {
-    setRecursos(recursos.map(recurso => {
+  const actualizarHoraContacto = async (id: string, horaContacto: string) => {
+    const recursoActualizado = recursos.map(recurso => {
       if (recurso.id === id) {
         return { ...recurso, horaContacto, notificacionMostrada: false };
       }
       return recurso;
-    }));
+    });
+    
+    setRecursos(recursoActualizado);
+
+    // 🔄 Sincronizar actualización de hora
+    const recurso = recursoActualizado.find(r => r.id === id);
+    if (recurso) {
+      realTimeSync.broadcast({
+        type: 'data-changed',
+        data: { 
+          action: 'recurso-updated',
+          recursoId: id,
+          recurso: recurso
+        },
+        timestamp: Date.now()
+      });
+    }
   };
 
   const abrirTimePicker = (recursoId: string) => {
@@ -197,8 +360,25 @@ function App() {
               <Row className="align-items-center">
                 <Col>
                   <h2 className="mb-0">🔧 Equipo Desarrollo Compass</h2>
+                  {/* 🔄 INFORMACIÓN DE SINCRONIZACIÓN */}
+                  <div className="small d-flex gap-3 mt-1">
+                    <span>🔄 Instancias activas: {activeInstances}</span>
+                    <span>🆔 ID: {instanceId.slice(-8)}</span>
+                    <span>📦 Recursos: {recursos.length}</span>
+                    {isLoading && <span>⏳ Sincronizando...</span>}
+                  </div>
                 </Col>
-                <Col xs="auto">
+                <Col xs="auto" className="d-flex gap-2">
+                  {/* 🔄 BOTÓN DE SINCRONIZACIÓN FORZADA */}
+                  <Button 
+                    variant="light" 
+                    size="sm" 
+                    onClick={forceSync}
+                    title="Forzar sincronización"
+                  >
+                    🔄 Sync
+                  </Button>
+                  
                   {instalable && (
                     <Button variant="light" size="sm" onClick={instalarPWA}>
                       📱 Instalar App

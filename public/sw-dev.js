@@ -1,7 +1,17 @@
-// Service Worker para desarrollo - versión mejorada y estable
+// Service Worker para desarrollo - versión mejorada y estable con sincronización
 const CACHE_NAME = 'compass-team-dev-v2';
 
 console.log('SW Dev: Service Worker de desarrollo cargado');
+
+// 🔄 SISTEMA DE SINCRONIZACIÓN EN TIEMPO REAL
+let broadcastChannel = null;
+
+try {
+  broadcastChannel = new BroadcastChannel('compass-team-sync');
+  console.log('SW Dev: BroadcastChannel inicializado');
+} catch (error) {
+  console.warn('SW Dev: BroadcastChannel no disponible:', error);
+}
 
 self.addEventListener('install', (event) => {
   console.log('SW Dev: Instalando...');
@@ -47,9 +57,61 @@ self.addEventListener('fetch', (event) => {
 });
 
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
+  const { type, data } = event.data || {};
+  
+  if (type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
+  
+  // 🔄 MANEJO DE MENSAJES DE SINCRONIZACIÓN
+  if (type === 'BROADCAST_TO_CLIENTS') {
+    console.log('SW Dev: Reenviando mensaje a todos los clientes:', data);
+    
+    // Enviar mensaje a todos los clientes conectados
+    self.clients.matchAll().then((clients) => {
+      clients.forEach((client) => {
+        client.postMessage({
+          type: 'SYNC_UPDATE',
+          data: data
+        });
+      });
+    });
+    
+    // También enviar via BroadcastChannel si está disponible
+    if (broadcastChannel) {
+      try {
+        broadcastChannel.postMessage(data);
+      } catch (error) {
+        console.warn('SW Dev: Error enviando via BroadcastChannel:', error);
+      }
+    }
+  }
+  
+  // Responder con estado del service worker
+  if (type === 'PING') {
+    event.ports[0]?.postMessage({
+      type: 'PONG',
+      timestamp: Date.now(),
+      cacheNames: [CACHE_NAME]
+    });
+  }
 });
+
+// 🔄 LISTENER PARA BROADCASTCHANNEL
+if (broadcastChannel) {
+  broadcastChannel.addEventListener('message', (event) => {
+    console.log('SW Dev: Mensaje recibido en BroadcastChannel:', event.data);
+    
+    // Reenviar a todos los clientes
+    self.clients.matchAll().then((clients) => {
+      clients.forEach((client) => {
+        client.postMessage({
+          type: 'SYNC_UPDATE',
+          data: event.data
+        });
+      });
+    });
+  });
+}
 
 console.log('SW Dev: Configurado para desarrollo');

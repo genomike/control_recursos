@@ -1,0 +1,53 @@
+{
+  "name": "compass-team-electron",
+  "version": "1.0.0",
+  "description": "Compass Team PWA con System Tray",
+  "main": "electron/main.js",
+  "scripts": {
+    "electron": "electron .",
+    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5174 && electron .\"",
+    "electron:pack": "npm run build && electron-builder",
+    "electron:dist": "npm run build && electron-builder --publish=never",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "build": {
+    "appId": "com.compass.team.pwa",
+    "productName": "Compass Team",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "public/pwa-*.png",
+      "public/favicon.png"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "public/favicon.png",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "runAfterFinish": true
+    },
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "public/pwa-512x512.png"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "public/pwa-512x512.png",
+      "category": "Office"
+    }
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1",
+    "concurrently": "^8.2.2",
+    "wait-on": "^7.2.0"
+  }
+}
