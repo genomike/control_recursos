@@ -24,8 +24,7 @@ function App() {
   const {
     isLoading,
     forceSync,
-    activeInstances,
-    instanceId
+    activeInstances
   } = useRealTimeSync({
     autoRefresh: true,
     enableNotifications: true
@@ -399,21 +398,12 @@ function App() {
         <Col xs={12} lg={10} xl={8}>
           <Card className="shadow-sm">
             <Card.Header className="bg-primary text-white">
-              <Row className="align-items-start align-items-md-center gy-2">
-                <Col xs="auto" className="align-self-center">
+              <Row className="align-items-center">
+                <Col>
                   <h2 className="mb-0">💎 Recursos</h2>
                   {isLoading && <div className="small mt-1"><span>⏳ Sincronizando...</span></div>}
                 </Col>
-                <Col xs="auto" className="align-self-center">
-                  {/* 🔄 INFORMACIÓN DE SINCRONIZACIÓN */}
-                  <div className="ms-md-4" style={{ fontSize: '0.75rem', lineHeight: '1.1' }}>
-                    <div>🔄 Instancias activas: {activeInstances}</div>
-                    <div>🆔 ID: {instanceId.slice(-8)}</div>
-                    <div>📦 Recursos: {recursos.length}</div>
-                  </div>
-                </Col>
-                <Col></Col>
-                <Col xs="auto" className="d-flex gap-2 align-self-center">
+                <Col xs="auto" className="d-flex gap-2 align-items-center">
                   {/* ➕ BOTÓN FLOTANTE PARA AGREGAR RECURSOS */}
                   <div className="floating-add-container-header">
                     <div className="floating-add-trigger-header">
@@ -423,7 +413,7 @@ function App() {
                         className="floating-add-btn-header"
                         onClick={() => setShowAddPanel(!showAddPanel)}
                       >
-                        ➕ Nuevo
+                        ➕
                       </Button>
                       
                       {/* Panel deslizante que aparece en click */}
@@ -493,17 +483,34 @@ function App() {
                     onClick={forceSync}
                     title="Forzar sincronización"
                   >
-                    🔄 Sync
+                    🔄
                   </Button>
                   
                   {instalable && (
                     <Button variant="light" size="sm" onClick={instalarPWA}>
-                      📱 Instalar App
+                      📱
                     </Button>
                   )}
                 </Col>
               </Row>
             </Card.Header>
+            
+            {/* Nueva franja azul claro con información */}
+            <div className="bg-info bg-opacity-25" style={{ padding: '2px 1rem', margin: 0, lineHeight: '1' }}>
+              <Row className="align-items-center g-0" style={{ margin: 0 }}>
+                <Col xs="auto" className="p-0">
+                  <span style={{ fontSize: '0.75rem', lineHeight: '1', margin: 0, padding: 0 }}>
+                    🔄 Instancias activas: {activeInstances}
+                  </span>
+                </Col>
+                <Col className="text-end p-0">
+                  <span style={{ fontSize: '0.75rem', lineHeight: '1', margin: 0, padding: 0 }}>
+                    📦 Recursos: {recursos.length}
+                  </span>
+                </Col>
+              </Row>
+            </div>
+            
             <Card.Body>
               {/* Lista de recursos */}
               {recursos.length === 0 ? (
