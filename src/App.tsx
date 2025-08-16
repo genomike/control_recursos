@@ -399,18 +399,21 @@ function App() {
         <Col xs={12} lg={10} xl={8}>
           <Card className="shadow-sm">
             <Card.Header className="bg-primary text-white">
-              <Row className="align-items-center">
-                <Col>
-                  <h2 className="mb-0">� Recursos</h2>
+              <Row className="align-items-start align-items-md-center gy-2">
+                <Col xs="auto" className="align-self-center">
+                  <h2 className="mb-0">💎 Recursos</h2>
+                  {isLoading && <div className="small mt-1"><span>⏳ Sincronizando...</span></div>}
+                </Col>
+                <Col xs="auto" className="align-self-center">
                   {/* 🔄 INFORMACIÓN DE SINCRONIZACIÓN */}
-                  <div className="small d-flex gap-3 mt-1">
-                    <span>🔄 Instancias activas: {activeInstances}</span>
-                    <span>🆔 ID: {instanceId.slice(-8)}</span>
-                    <span>📦 Recursos: {recursos.length}</span>
-                    {isLoading && <span>⏳ Sincronizando...</span>}
+                  <div className="ms-md-4" style={{ fontSize: '0.75rem', lineHeight: '1.1' }}>
+                    <div>🔄 Instancias activas: {activeInstances}</div>
+                    <div>🆔 ID: {instanceId.slice(-8)}</div>
+                    <div>📦 Recursos: {recursos.length}</div>
                   </div>
                 </Col>
-                <Col xs="auto" className="d-flex gap-2">
+                <Col></Col>
+                <Col xs="auto" className="d-flex gap-2 align-self-center">
                   {/* ➕ BOTÓN FLOTANTE PARA AGREGAR RECURSOS */}
                   <div className="floating-add-container-header">
                     <div className="floating-add-trigger-header">
@@ -505,7 +508,7 @@ function App() {
               {/* Lista de recursos */}
               {recursos.length === 0 ? (
                 <Alert variant="info" className="text-center">
-                  <h5>� No hay recursos disponibles</h5>
+                  <h5>📋 No hay recursos disponibles</h5>
                   <p className="mb-0">Usa el botón flotante de arriba para agregar tu primer recurso</p>
                 </Alert>
               ) : (
@@ -558,6 +561,16 @@ function App() {
                               onChange={() => toggleOcupado(recurso.id)}
                             />
                             <div className="d-flex gap-1">
+                              {/* Botón de limpiar texto (esponja) */}
+                              <Button
+                                variant="outline-secondary"
+                                size="sm"
+                                onClick={() => actualizarTexto(recurso.id, '')}
+                                title="Limpiar texto"
+                                style={{ minWidth: '32px' }}
+                              >
+                                🧽
+                              </Button>
                               <Button
                                 variant={recurso.horaContacto ? "info" : "outline-secondary"}
                                 size="sm"
