@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert } from 'react-bootstrap';
 import { useRealTimeSync } from './useRealTimeSync';
 import { realTimeSync } from './realTimeSync';
@@ -18,6 +18,8 @@ interface Recurso {
 }
 
 function App() {
+  const [showAddPanel, setShowAddPanel] = useState(false);
+
   // 🔄 SINCRONIZACIÓN EN TIEMPO REAL
   const {
     isLoading,
@@ -36,6 +38,9 @@ function App() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [currentRecursoId, setCurrentRecursoId] = useState<string>('');
+
+  // Referencia para el input del formulario flotante
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Inicializar base de datos offline
   useEffect(() => {
@@ -184,6 +189,43 @@ function App() {
 
     return () => clearInterval(interval);
   }, []); // Remover 'recursos' de las dependencias para evitar loop infinito
+
+  // Manejar click fuera del panel flotante
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      
+      // Si el panel está abierto y el click fue fuera del contenedor
+      if (showAddPanel && !target.closest('.floating-add-container-header')) {
+        setShowAddPanel(false);
+      }
+    };
+
+    if (showAddPanel) {
+      // Solo agregar el listener cuando el panel está abierto
+      document.addEventListener('click', handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [showAddPanel]);
+
+  // Enfocar el input cuando se abre el panel (simplificado)
+  useEffect(() => {
+    if (showAddPanel && inputRef.current) {
+      // Solo un intento simple de foco
+      setTimeout(() => {
+        if (inputRef.current) {
+          try {
+            inputRef.current.focus();
+          } catch (error) {
+            console.warn('No se pudo enfocar el input:', error);
+          }
+        }
+      }, 100);
+    }
+  }, [showAddPanel]);
 
   // 🔄 FUNCIONES CON SINCRONIZACIÓN EN TIEMPO REAL
   const agregarRecurso = async () => {
@@ -359,7 +401,7 @@ function App() {
             <Card.Header className="bg-primary text-white">
               <Row className="align-items-center">
                 <Col>
-                  <h2 className="mb-0">🔧 Equipo Desarrollo Compass</h2>
+                  <h2 className="mb-0">� Recursos</h2>
                   {/* 🔄 INFORMACIÓN DE SINCRONIZACIÓN */}
                   <div className="small d-flex gap-3 mt-1">
                     <span>🔄 Instancias activas: {activeInstances}</span>
@@ -369,6 +411,78 @@ function App() {
                   </div>
                 </Col>
                 <Col xs="auto" className="d-flex gap-2">
+                  {/* ➕ BOTÓN FLOTANTE PARA AGREGAR RECURSOS */}
+                  <div className="floating-add-container-header">
+                    <div className="floating-add-trigger-header">
+                      <Button 
+                        variant="light" 
+                        size="sm"
+                        className="floating-add-btn-header"
+                        onClick={() => setShowAddPanel(!showAddPanel)}
+                      >
+                        ➕ Nuevo
+                      </Button>
+                      
+                      {/* Panel deslizante que aparece en click */}
+                      <div 
+                        className={`floating-add-panel-header ${showAddPanel ? 'show-panel' : ''}`}
+                      >
+                        <Card className="shadow-lg border-success">
+                          <Card.Header className="bg-success text-white py-2">
+                            <div className="d-flex justify-content-start align-items-center">
+                              <h6 className="mb-0">➕ Nuevo Recurso</h6>
+                            </div>
+                          </Card.Header>
+                          <Card.Body className="p-3">
+                            <Row>
+                              <Col xs={12} className="mb-2">
+                                <Form.Control
+                                  ref={inputRef}
+                                  type="text"
+                                  placeholder="Nombre del recurso..."
+                                  value={nuevoRecurso}
+                                  onChange={(e) => setNuevoRecurso(e.target.value)}
+                                  onKeyPress={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      agregarRecurso();
+                                      setShowAddPanel(false);
+                                    }
+                                  }}
+                                  size="sm"
+                                  tabIndex={showAddPanel ? 0 : -1}
+                                />
+                              </Col>
+                              <Col xs={12}>
+                                <div className="d-flex gap-2">
+                                  <Button 
+                                    variant="success" 
+                                    onClick={() => {
+                                      agregarRecurso();
+                                      setShowAddPanel(false);
+                                    }}
+                                    disabled={!nuevoRecurso.trim()}
+                                    className="flex-grow-1"
+                                    size="sm"
+                                  >
+                                    ✅ Crear
+                                  </Button>
+                                  <Button 
+                                    variant="outline-secondary" 
+                                    size="sm"
+                                    onClick={() => setNuevoRecurso('')}
+                                  >
+                                    🔄
+                                  </Button>
+                                </div>
+                              </Col>
+                            </Row>
+                          </Card.Body>
+                        </Card>
+                      </div>
+                    </div>
+                  </div>
+                  
                   {/* 🔄 BOTÓN DE SINCRONIZACIÓN FORZADA */}
                   <Button 
                     variant="light" 
@@ -388,42 +502,11 @@ function App() {
               </Row>
             </Card.Header>
             <Card.Body>
-              {/* Sección para agregar nuevos recursos */}
-              <Row className="mb-4">
-                <Col>
-                  <Card className="bg-light">
-                    <Card.Body>
-                      <Row>
-                        <Col xs={12} md={8} lg={9}>
-                          <Form.Control
-                            type="text"
-                            placeholder="Nombre del recurso..."
-                            value={nuevoRecurso}
-                            onChange={(e) => setNuevoRecurso(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && agregarRecurso()}
-                          />
-                        </Col>
-                        <Col xs={12} md={4} lg={3} className="mt-2 mt-md-0">
-                          <Button 
-                            variant="success" 
-                            onClick={agregarRecurso}
-                            disabled={!nuevoRecurso.trim()}
-                            className="w-100"
-                          >
-                            Añadir
-                          </Button>
-                        </Col>
-                      </Row>
-                    </Card.Body>
-                  </Card>
-                </Col>
-              </Row>
-
               {/* Lista de recursos */}
               {recursos.length === 0 ? (
                 <Alert variant="info" className="text-center">
-                  <h5>📝 No hay recursos registrados</h5>
-                  <p className="mb-0">Agrega tu primer recurso para comenzar</p>
+                  <h5>� No hay recursos disponibles</h5>
+                  <p className="mb-0">Usa el botón flotante de arriba para agregar tu primer recurso</p>
                 </Alert>
               ) : (
                 <Row>

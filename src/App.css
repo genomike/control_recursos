@@ -8,12 +8,126 @@ body {
   background-color: #f8f9fa;
 }
 
+/* 🚀 ESTILOS PARA BOTÓN FLOTANTE EN HEADER */
+.floating-add-container-header {
+  position: relative;
+}
+
+.floating-add-trigger-header {
+  position: relative;
+  z-index: 10;
+}
+
+.floating-add-btn-header {
+  border-radius: 6px !important;
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+}
+
+.floating-add-btn-header:hover {
+  transform: translateY(-1px);
+}
+
+.floating-add-panel-header {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  transform: translateY(10px);
+  width: 300px;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1050;
+  pointer-events: none;
+}
+
+.floating-add-trigger-header:hover .floating-add-panel-header,
+.floating-add-panel-header.show-panel {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(15px);
+  pointer-events: all;
+}
+
+.floating-add-panel-header .card {
+  border: none;
+  border-radius: 12px;
+  animation: slideInDown 0.3s ease-out;
+  pointer-events: all;
+}
+
+/* Asegurar que todos los elementos internos sean interactivos */
+.floating-add-panel-header .card * {
+  pointer-events: all;
+}
+
+/* Asegurar que los botones específicamente sean clickeables */
+.floating-add-panel-header .btn {
+  pointer-events: all !important;
+  cursor: pointer !important;
+}
+
+.floating-add-panel-header .btn-close-panel {
+  pointer-events: all !important;
+  cursor: pointer !important;
+  z-index: 1051;
+}
+
+/* Botón X simplificado */
+.btn-close-panel-simple {
+  pointer-events: all !important;
+  cursor: pointer !important;
+  z-index: 1052 !important;
+  position: relative;
+}
+
+.btn-close-panel-simple:hover {
+  background: rgba(255,255,255,0.3) !important;
+  transform: scale(1.1);
+}
+
+/* Área extendida de hover para evitar que desaparezca - solo en el trigger */
+.floating-add-trigger-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -10px;
+  bottom: -25px;
+  left: -10px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive para móviles */
+@media (max-width: 768px) {
+  .floating-add-panel-header {
+    width: 280px;
+    right: -20px;
+  }
+}
+
+/* Mejora visual del header */
+.bg-primary {
+  background: linear-gradient(135deg, #007bff, #0056b3) !important;
+}
+
 .card {
   border-radius: 10px;
   transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
 
-.card:hover {
+.card:hover:not(.floating-add-panel .card) {
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
 }
