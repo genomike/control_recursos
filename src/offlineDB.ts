@@ -28,56 +28,72 @@ class OfflineDB {
   private readonly version = 1;
 
   async init(): Promise<void> {
+    // Si ya está inicializada, no hacer nada
+    if (this.db) {
+      console.log('OfflineDB: Base de datos ya inicializada');
+      return;
+    }
+
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbName, this.version);
+      try {
+        const request = indexedDB.open(this.dbName, this.version);
 
-      request.onerror = () => {
-        console.error('OfflineDB: Error abriendo la base de datos', request.error);
-        reject(request.error);
-      };
+        request.onerror = () => {
+          console.error('OfflineDB: Error abriendo la base de datos', request.error);
+          reject(request.error);
+        };
 
-      request.onsuccess = () => {
-        this.db = request.result;
-        console.log('OfflineDB: Base de datos inicializada correctamente');
-        resolve();
-      };
+        request.onsuccess = () => {
+          this.db = request.result;
+          console.log('OfflineDB: Base de datos inicializada correctamente');
+          resolve();
+        };
 
-      request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
-        console.log('OfflineDB: Creando/actualizando esquema de base de datos');
+        request.onupgradeneeded = (event) => {
+          try {
+            const db = (event.target as IDBOpenDBRequest).result;
+            console.log('OfflineDB: Creando/actualizando esquema de base de datos');
 
-        // Store para tareas
-        if (!db.objectStoreNames.contains('tasks')) {
-          const taskStore = db.createObjectStore('tasks', { keyPath: 'id' });
-          taskStore.createIndex('completed', 'completed', { unique: false });
-          taskStore.createIndex('priority', 'priority', { unique: false });
-          taskStore.createIndex('dueDate', 'dueDate', { unique: false });
-          taskStore.createIndex('syncStatus', 'syncStatus', { unique: false });
-          console.log('OfflineDB: Store de tareas creado');
-        }
+            // Store para tareas
+            if (!db.objectStoreNames.contains('tasks')) {
+              const taskStore = db.createObjectStore('tasks', { keyPath: 'id' });
+              taskStore.createIndex('completed', 'completed', { unique: false });
+              taskStore.createIndex('priority', 'priority', { unique: false });
+              taskStore.createIndex('dueDate', 'dueDate', { unique: false });
+              taskStore.createIndex('syncStatus', 'syncStatus', { unique: false });
+              console.log('OfflineDB: Store de tareas creado');
+            }
 
-        // Store para datos de sincronización pendientes
-        if (!db.objectStoreNames.contains('syncQueue')) {
-          const syncStore = db.createObjectStore('syncQueue', { keyPath: 'id' });
-          syncStore.createIndex('timestamp', 'timestamp', { unique: false });
-          syncStore.createIndex('action', 'action', { unique: false });
-          console.log('OfflineDB: Store de sincronización creado');
-        }
+            // Store para datos de sincronización pendientes
+            if (!db.objectStoreNames.contains('syncQueue')) {
+              const syncStore = db.createObjectStore('syncQueue', { keyPath: 'id' });
+              syncStore.createIndex('timestamp', 'timestamp', { unique: false });
+              syncStore.createIndex('action', 'action', { unique: false });
+              console.log('OfflineDB: Store de sincronización creado');
+            }
 
-        // Store para configuración de la app
-        if (!db.objectStoreNames.contains('settings')) {
-          db.createObjectStore('settings', { keyPath: 'key' });
-          console.log('OfflineDB: Store de configuración creado');
-        }
+            // Store para configuración de la app
+            if (!db.objectStoreNames.contains('settings')) {
+              db.createObjectStore('settings', { keyPath: 'key' });
+              console.log('OfflineDB: Store de configuración creado');
+            }
 
-        // Store para notificaciones offline
-        if (!db.objectStoreNames.contains('notifications')) {
-          const notifStore = db.createObjectStore('notifications', { keyPath: 'id' });
-          notifStore.createIndex('timestamp', 'timestamp', { unique: false });
-          notifStore.createIndex('read', 'read', { unique: false });
-          console.log('OfflineDB: Store de notificaciones creado');
-        }
-      };
+            // Store para notificaciones offline
+            if (!db.objectStoreNames.contains('notifications')) {
+              const notifStore = db.createObjectStore('notifications', { keyPath: 'id' });
+              notifStore.createIndex('timestamp', 'timestamp', { unique: false });
+              notifStore.createIndex('read', 'read', { unique: false });
+              console.log('OfflineDB: Store de notificaciones creado');
+            }
+          } catch (upgradeError) {
+            console.error('OfflineDB: Error en upgrade de base de datos:', upgradeError);
+            reject(upgradeError);
+          }
+        };
+      } catch (initError) {
+        console.error('OfflineDB: Error iniciando IndexedDB:', initError);
+        reject(initError);
+      }
     });
   }
 
@@ -110,25 +126,53 @@ class OfflineDB {
   }
 
   async getTasks(): Promise<Task[]> {
-    if (!this.db) throw new Error('Base de datos no inicializada');
+    // Verificación de seguridad mejorada
+    if (!this.db) {
+      console.warn('OfflineDB: Base de datos no inicializada, intentando inicializar...');
+      try {
+        await this.init();
+      } catch (error) {
+        console.error('OfflineDB: Error inicializando base de datos:', error);
+        return []; // Retornar array vacío en lugar de error
+      }
+    }
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['tasks'], 'readonly');
-      const store = transaction.objectStore('tasks');
-      const request = store.getAll();
+    return new Promise((resolve) => {
+      try {
+        const transaction = this.db!.transaction(['tasks'], 'readonly');
+        const store = transaction.objectStore('tasks');
+        const request = store.getAll();
 
-      request.onsuccess = () => {
-        const tasks = request.result.map(task => ({
-          ...task,
-          createdAt: new Date(task.createdAt),
-          updatedAt: new Date(task.updatedAt),
-          dueDate: task.dueDate ? new Date(task.dueDate) : undefined
-        }));
-        console.log(`OfflineDB: ${tasks.length} tareas recuperadas`);
-        resolve(tasks);
-      };
+        request.onsuccess = () => {
+          try {
+            const tasks = request.result.map(task => ({
+              ...task,
+              createdAt: new Date(task.createdAt),
+              updatedAt: new Date(task.updatedAt),
+              dueDate: task.dueDate ? new Date(task.dueDate) : undefined
+            }));
+            console.log(`OfflineDB: ${tasks.length} tareas recuperadas`);
+            resolve(tasks);
+          } catch (mapError) {
+            console.error('OfflineDB: Error procesando tareas:', mapError);
+            resolve([]); // Retornar array vacío en caso de error
+          }
+        };
 
-      request.onerror = () => reject(request.error);
+        request.onerror = () => {
+          console.error('OfflineDB: Error en request getTasks:', request.error);
+          resolve([]); // Retornar array vacío en lugar de rechazar
+        };
+        
+        transaction.onerror = () => {
+          console.error('OfflineDB: Error en transacción getTasks:', transaction.error);
+          resolve([]); // Retornar array vacío en lugar de rechazar
+        };
+        
+      } catch (transactionError) {
+        console.error('OfflineDB: Error creando transacción:', transactionError);
+        resolve([]); // Retornar array vacío en lugar de rechazar
+      }
     });
   }
 

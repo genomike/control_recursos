@@ -22,6 +22,11 @@ export default defineConfig({
           res.setHeader('Content-Type', 'application/json')
           next()
         })
+        // Headers para PWA offline
+        server.middlewares.use((_req, res, next) => {
+          res.setHeader('Cache-Control', 'no-cache')
+          next()
+        })
       }
     }
   ],

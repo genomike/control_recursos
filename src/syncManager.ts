@@ -18,7 +18,7 @@ export class SyncManager {
   constructor(config: Partial<SyncConfig> = {}) {
     this.config = {
       apiBaseUrl: config.apiBaseUrl || '/api',
-      syncInterval: config.syncInterval || 60000, // 60 segundos (más espaciado)
+      syncInterval: config.syncInterval || 120000, // 2 minutos (más espaciado para reducir errores)
       maxRetries: config.maxRetries || 3,
       retryDelay: config.retryDelay || 5000 // 5 segundos
     };
@@ -295,15 +295,19 @@ export class SyncManager {
       console.log(`SyncManager: ${serverTasks.length} tareas descargadas del servidor`);
       
     } catch (error) {
-      // En modo desarrollo o sin API, simular datos solo una vez
+      // Manejo silencioso de errores offline para reducir ruido en consola
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        console.log('SyncManager: Servidor no disponible - trabajando en modo offline');
+        // Error de red - modo offline esperado
+        console.log('SyncManager: Modo offline detectado (sin servidor)');
       } else if (error instanceof SyntaxError) {
-        console.log('SyncManager: Error de formato en respuesta del servidor - trabajando en modo offline');
+        // Error de parsing - respuesta no válida
+        console.warn('SyncManager: Respuesta del servidor no válida');
       } else {
-        console.log('SyncManager: Error descargando del servidor - trabajando en modo offline:', error);
+        // Otros errores
+        const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+        console.warn('SyncManager: Error de conectividad:', errorMessage);
       }
-      // No hacer nada más, simplemente continuar offline
+      // Continuar trabajando offline sin más errores
     }
   }
 

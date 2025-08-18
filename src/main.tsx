@@ -17,14 +17,19 @@ async function initializePWA() {
   try {
     console.log('🚀 Inicializando sistemas PWA...');
     
-    // 1. Inicializar base de datos offline con timeout
-    const dbPromise = Promise.race([
-      offlineDB.init(),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('DB timeout')), 5000))
-    ]);
-    
-    await dbPromise;
-    console.log('✅ Base de datos offline inicializada');
+    // 1. Inicializar base de datos offline con mejor manejo de errores
+    try {
+      const dbPromise = Promise.race([
+        offlineDB.init(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('DB timeout')), 10000)) // Aumentar timeout
+      ]);
+      
+      await dbPromise;
+      console.log('✅ Base de datos offline inicializada');
+    } catch (dbError) {
+      console.warn('⚠️ Error inicializando DB, continuando sin ella:', dbError);
+      // No bloquear la aplicación si falla la DB
+    }
     
     // 2. Configurar notificaciones (no bloquear si falla)
     try {
@@ -34,29 +39,37 @@ async function initializePWA() {
       console.warn('⚠️ Notificaciones no disponibles:', notifError);
     }
     
-    // 3. Iniciar sincronización automática
-    syncManager.startAutoSync();
-    console.log('✅ Sincronización automática iniciada');
+    // 3. Iniciar sincronización automática con protección de errores
+    try {
+      syncManager.startAutoSync();
+      console.log('✅ Sincronización automática iniciada');
+    } catch (syncError) {
+      console.warn('⚠️ Error iniciando sincronización:', syncError);
+    }
     
     // 4. El indicador de conexión se inicia automáticamente
     console.log('✅ Indicador de conexión activo');
     
     // 5. Configurar eventos de sincronización (con protección de errores)
-    syncManager.addEventListener((event) => {
-      try {
-        console.log('📡 Evento de sincronización:', event);
-        
-        if (event.type === 'sync-success') {
-          offlineNotifications.showSyncSuccessNotification().catch(() => {});
-        } else if (event.type === 'sync-error') {
-          offlineNotifications.showSyncErrorNotification(event.error || 'Error desconocido').catch(() => {});
-        } else if (event.type === 'offline') {
-          offlineNotifications.showOfflineModeNotification().catch(() => {});
+    try {
+      syncManager.addEventListener((event) => {
+        try {
+          console.log('📡 Evento de sincronización:', event);
+          
+          if (event.type === 'sync-success') {
+            offlineNotifications.showSyncSuccessNotification().catch(() => {});
+          } else if (event.type === 'sync-error') {
+            offlineNotifications.showSyncErrorNotification(event.error || 'Error desconocido').catch(() => {});
+          } else if (event.type === 'offline') {
+            offlineNotifications.showOfflineModeNotification().catch(() => {});
+          }
+        } catch (eventError) {
+          console.warn('Error en evento de sincronización:', eventError);
         }
-      } catch (eventError) {
-        console.warn('Error en evento de sincronización:', eventError);
-      }
-    });
+      });
+    } catch (listenerError) {
+      console.warn('⚠️ Error configurando listeners de sincronización:', listenerError);
+    }
     
     // 6. Mostrar notificación de bienvenida si es primera vez (con delay)
     const isFirstTime = !localStorage.getItem('pwa-initialized');

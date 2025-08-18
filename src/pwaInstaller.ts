@@ -131,47 +131,39 @@ export function registerSW(): void {
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', async () => {
       try {
-        // Detectar si estamos en desarrollo o producción
-        const isDev = import.meta.env.DEV;
-        const swUrl = isDev ? '/sw-dev.js' : '/service-worker.js';
+        // Intentar primero el SW de producción (funciona mejor offline)
+        let swUrl = '/service-worker.js';
+        let registration;
         
-        console.log(`PWA: Intentando registrar SW: ${swUrl} en modo ${isDev ? 'development' : 'production'}`);
-        
-        const registration = await navigator.serviceWorker.register(swUrl, {
-          scope: '/',
-          type: 'module' // Intentar como módulo primero
-        }).catch(async () => {
-          // Si falla como módulo, intentar como script normal
-          return navigator.serviceWorker.register(swUrl, {
-            scope: '/'
-          });
-        });
+        try {
+          console.log('PWA: Intentando registrar SW de producción para mejor soporte offline');
+          registration = await navigator.serviceWorker.register(swUrl, { scope: '/' });
+        } catch (prodError) {
+          // Si falla el de producción, usar el de desarrollo
+          console.log('PWA: SW de producción no disponible, usando SW de desarrollo');
+          swUrl = '/sw-dev.js';
+          registration = await navigator.serviceWorker.register(swUrl, { scope: '/' });
+        }
         
         console.log('PWA: Service Worker registrado exitosamente:', registration.scope);
         
-        // Manejar updates solo en producción
-        if (!isDev) {
-          registration.addEventListener('updatefound', () => {
-            const newWorker = registration.installing;
-            if (newWorker) {
-              newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  console.log('PWA: Nueva versión disponible. Recarga para actualizar.');
-                  showUpdateNotification();
-                }
-              });
-            }
-          });
-        }
+        // Manejar updates 
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                console.log('PWA: Nueva versión disponible. Recarga para actualizar.');
+                showUpdateNotification();
+              }
+            });
+          }
+        });
         
       } catch (error) {
         console.error('PWA: Error registrando Service Worker:', error);
-        
-        // En modo desarrollo, intentar un enfoque alternativo
-        if (import.meta.env.DEV) {
-          console.warn('PWA: SW registro falló en dev mode. Intentando enfoque alternativo...');
-          await registerDevSW();
-        }
+        console.warn('PWA: SW registro falló. Intentando enfoque alternativo...');
+        await registerDevSW();
       }
     });
   } else {
